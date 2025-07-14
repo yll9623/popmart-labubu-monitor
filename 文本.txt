@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>泡泡玛特 Labubu 监控</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; padding: 1em; }
+  h1 { font-size: 1.5em; margin-bottom: 1em; }
+  #log { margin-top: 1em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5em; }
+  button { padding: 0.5em 1em; font-size: 1em; }
+</style>
+</head>
+<body>
+
+<h1>泡泡玛特 Labubu 监控（网页版临时版）</h1>
+<button id="startBtn">开始监控</button>
+<div id="log"></div>
+
+<script>
+const products = [
+  {id: 3884, name: "Exciting Macaron", url: "https://www.popmart.com/ja-JP/products/3884/the-monsters-exciting-macaron-%E3%81%AC%E3%81%84%E3%81%90%E3%82%8B%E3%81%BF%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BA"},
+  {id: 3891, name: "Have a Seat", url: "https://www.popmart.com/ja-JP/products/3891/the-monsters-have-a-seat-%E3%81%AC%E3%81%84%E3%81%90%E3%82%8B%E3%81%BF-%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BA"},
+  {id: 5737, name: "Big into Energy Pendant", url: "https://m.popmart.com/jp/products/5737/THE-MONSTERS-Big-into-Energy-%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BA-%E3%81%AC%E3%81%84%E3%81%90%E3%82%8B%E3%81%BF%E3%83%9A%E3%83%B3%E3%83%80%E3%83%B3%E3%83%88"}
+];
+
+const logDiv = document.getElementById('log');
+const startBtn = document.getElementById('startBtn');
+let intervalId = null;
+let notified = {};
+
+function log(msg) {
+  let now = new Date().toLocaleTimeString();
+  logDiv.innerHTML = `[${now}] ${msg}<br>` + logDiv.innerHTML;
+}
+
+async function checkStock(product) {
+  try {
+    const res = await fetch(product.url, {cache: "no-store"});
+    const text = await res.text();
+    const inStock = text.includes("在庫あり");
+    log(`${product.name} (${product.id}): ${inStock ? "有货" : "无货"}`);
+    if(inStock && !notified[product.id]){
+      notified[product.id] = true;
+      alert(`🎉 ${product.name} 有货啦！`);
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500]);
+      }
+      window.open(product.url, "_blank");
+    }
+  } catch(e) {
+    log(`检测 ${product.name} 失败: ${e.message}`);
+  }
+}
+
+async function monitor() {
+  for(const p of products){
+    await checkStock(p);
+  }
+}
+
+startBtn.onclick = () => {
+  if(intervalId){
+    clearInterval(intervalId);
+    intervalId = null;
+    startBtn.textContent = "开始监控";
+    log("已停止监控");
+  } else {
+    notified = {};
+    monitor();
+    intervalId = setInterval(monitor, 60000);
+    startBtn.textContent = "停止监控";
+    log("开始监控中...");
+  }
+};
+</script>
+
+</body>
+</html>
